@@ -1,0 +1,250 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Travel Planner Design System - All colors, gradients, fonts, etc defined here */
+
+@layer base {
+  :root {
+    /* Travel-themed color palette */
+    --background: 210 20% 98%;
+    --foreground: 220 13% 18%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 13% 18%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 13% 18%;
+
+    /* Primary - Ocean Blue */
+    --primary: 200 100% 45%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 200 100% 55%;
+
+    /* Secondary - Sunset Orange */
+    --secondary: 25 95% 58%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Accent - Adventure Green */
+    --accent: 142 69% 58%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Muted */
+    --muted: 210 20% 95%;
+    --muted-foreground: 220 8.9% 46.1%;
+
+    /* Destructive */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders and inputs */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 200 100% 45%;
+
+    /* Custom travel colors */
+    --travel-sky: 200 100% 85%;
+    --travel-ocean: 200 100% 45%;
+    --travel-sunset: 25 95% 58%;
+    --travel-nature: 142 69% 58%;
+    --travel-sand: 45 100% 85%;
+    --travel-mountain: 220 13% 35%;
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(var(--travel-ocean)), hsl(var(--travel-sunset)));
+    --gradient-card: linear-gradient(180deg, hsl(var(--background)), hsl(var(--travel-sky) / 0.1));
+    --gradient-button: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-overlay: linear-gradient(180deg, transparent, hsl(var(--foreground) / 0.7));
+
+    /* Shadows */
+    --shadow-card: 0 4px 20px hsl(var(--primary) / 0.1);
+    --shadow-button: 0 8px 25px hsl(var(--primary) / 0.3);
+    --shadow-float: 0 10px 40px hsl(var(--primary) / 0.15);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+@layer components {
+  /* Hero components */
+  .hero-section {
+    @apply relative min-h-screen flex items-center justify-center overflow-hidden;
+  }
+
+  .hero-video {
+    @apply absolute inset-0 w-full h-full object-cover;
+  }
+
+  .hero-overlay {
+    @apply absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/50;
+  }
+
+  .hero-content {
+    @apply relative z-10 text-center text-white px-6;
+  }
+
+  /* Card components */
+  .travel-card {
+    @apply bg-card rounded-xl shadow-[var(--shadow-card)] overflow-hidden transition-[var(--transition-smooth)] hover:shadow-[var(--shadow-float)] hover:-translate-y-2;
+  }
+
+  .travel-card-image {
+    @apply relative aspect-[4/3] overflow-hidden;
+  }
+
+  .travel-card-badge {
+    @apply absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-foreground text-xs font-semibold px-3 py-1 rounded-full;
+  }
+
+  .travel-card-heart {
+    @apply absolute top-3 right-3 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center cursor-pointer transition-[var(--transition-smooth)] hover:bg-white;
+  }
+
+  /* Button variants */
+  .btn-hero {
+    @apply bg-[var(--gradient-button)] text-primary-foreground font-semibold px-8 py-4 rounded-xl shadow-[var(--shadow-button)] transition-[var(--transition-bounce)] hover:scale-105;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground font-semibold px-6 py-3 rounded-lg transition-[var(--transition-smooth)] hover:bg-secondary/90;
+  }
+
+  .btn-accent {
+    @apply bg-accent text-accent-foreground font-semibold px-6 py-3 rounded-lg transition-[var(--transition-smooth)] hover:bg-accent/90;
+  }
+
+  /* Navigation */
+  .navbar {
+    @apply fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-border;
+  }
+
+  .navbar-brand {
+    @apply text-2xl font-bold bg-[var(--gradient-hero)] bg-clip-text text-transparent;
+  }
+
+  /* Form components */
+  .auth-modal {
+    @apply fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4;
+  }
+
+  .auth-form {
+    @apply bg-card rounded-2xl p-8 w-full max-w-md shadow-[var(--shadow-float)] transform transition-[var(--transition-bounce)];
+  }
+
+  /* Search components */
+  .search-section {
+    @apply bg-[var(--gradient-card)] p-8 rounded-2xl shadow-[var(--shadow-card)];
+  }
+
+  /* Animation classes */
+  .slide-down {
+    animation: slideDown 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .fade-in {
+    animation: fadeIn 0.8s ease-out;
+  }
+
+  .float {
+    animation: float 3s ease-in-out infinite;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
