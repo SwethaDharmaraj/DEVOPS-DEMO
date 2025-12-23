@@ -51,9 +51,9 @@
     --travel-mountain: 220 13% 35%;
 
     /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(var(--travel-ocean)), hsl(var(--travel-sunset)));
-    --gradient-card: linear-gradient(180deg, hsl(var(--background)), hsl(var(--travel-sky) / 0.1));
-    --gradient-button: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-hero: linear-gradient(135deg, #10b981, #14b8a6); /* emerald -> teal */
+    --gradient-card: linear-gradient(180deg, hsl(var(--background)), hsl(var(--travel-sky) / 0.06));
+    --gradient-button: linear-gradient(135deg, #10b981, #14b8a6);
     --gradient-overlay: linear-gradient(180deg, transparent, hsl(var(--foreground) / 0.7));
 
     /* Shadows */

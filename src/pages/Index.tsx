@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Star, MapPin, Compass, Award, Clock, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -12,6 +13,17 @@ import { WishlistModal } from '@/components/WishlistModal';
 import { BookingModal } from '@/components/BookingModal';
 import { VideoModal } from '@/components/VideoModal';
 import { Footer } from '@/components/Footer';
+import { FeatureNavigation } from '@/components/FeatureNavigation';
+
+// Import new feature components
+import { ItineraryPlanner } from '@/components/ItineraryPlanner';
+import { DestinationInfo } from '@/components/DestinationInfo';
+import { BookingSystem } from '@/components/BookingSystem';
+import { InteractiveMap } from '@/components/InteractiveMap';
+import { CurrencyConverter } from '@/components/CurrencyConverter';
+import { WeatherForecast } from '@/components/WeatherForecast';
+import { TravelBlog } from '@/components/TravelBlog';
+import { ReviewsAndRatings } from '@/components/ReviewsAndRatings';
 
 // Import data
 import { travelPackages, getPackagesByFilters } from '@/data/travelPackages';
@@ -21,7 +33,8 @@ import { travelPackages, getPackagesByFilters } from '@/data/travelPackages';
 
 
 const Index = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // Initialize from localStorage so redirect after signup lands on main immediately
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => !!localStorage.getItem('travel_planner_auth'));
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showWishlistModal, setShowWishlistModal] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -31,6 +44,9 @@ const Index = () => {
   const [cartItems, setCartItems] = useState<TravelPackage[]>([]);
   const [displayPackages, setDisplayPackages] = useState<TravelPackage[]>(travelPackages);
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
+  const [currentFeature, setCurrentFeature] = useState('home');
+  const [initialBookingType, setInitialBookingType] = useState<'flights' | 'hotels' | 'cars' | 'activities' | 'ships'>('flights');
+  const [userName, setUserName] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Check login status on component mount
@@ -38,6 +54,15 @@ const Index = () => {
     const savedAuth = localStorage.getItem('travel_planner_auth');
     if (savedAuth) {
       setIsLoggedIn(true);
+      // Load user name for greeting
+      const rawUser = localStorage.getItem('travel_planner_user');
+      if (rawUser) {
+        try {
+          const u = JSON.parse(rawUser);
+          const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
+          setUserName(name || null);
+        } catch {}
+      }
     }
     
     // Load wishlist from localStorage
@@ -60,6 +85,17 @@ const Index = () => {
   const handleLogin = (email: string, password: string) => {
     setIsLoggedIn(true);
     localStorage.setItem('travel_planner_auth', 'true');
+
+    // Load and store user name for greeting when logging in from this page
+    const rawUser = localStorage.getItem('travel_planner_user');
+    if (rawUser) {
+      try {
+        const u = JSON.parse(rawUser);
+        const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
+        setUserName(name || null);
+      } catch {}
+    }
+    // If user landed here somehow without router redirect, stay; Welcome page already routes to /app.
   };
 
   const handleLogout = () => {
@@ -151,68 +187,96 @@ const Index = () => {
     });
   };
 
+  const { t } = useLanguage();
+
   const stats = [
-    { icon: Compass, label: 'Destinations', value: '150+' },
-    { icon: Users, label: 'Happy Travelers', value: '50K+' },
-    { icon: Award, label: 'Awards Won', value: '25+' },
-    { icon: Star, label: 'Average Rating', value: '4.8' }
+    { icon: Compass, label: t('stats.destinations'), value: '150+' },
+    { icon: Users, label: t('stats.happyTravelers'), value: '50K+' },
+    { icon: Award, label: t('stats.awards'), value: '25+' },
+    { icon: Star, label: t('stats.avgRating'), value: '4.8' }
   ];
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <Navbar
-        isLoggedIn={isLoggedIn}
-        onAuthClick={() => setShowAuthModal(true)}
-        onLogout={handleLogout}
-        wishlistCount={wishlistItems.length}
-        cartCount={cartItems.length}
-        onWishlistClick={() => setShowWishlistModal(true)}
-        onCartClick={() => {}}
-      />
+  const handleFeatureSelect = (feature: string) => {
+    if (feature.startsWith('book:')) {
+      const type = feature.split(':')[1] as 'flights' | 'hotels' | 'cars' | 'activities' | 'ships';
+      setInitialBookingType(type);
+      setCurrentFeature('book');
+    } else {
+      setCurrentFeature(feature);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
+  const renderCurrentFeature = () => {
+    switch (currentFeature) {
+      case 'itinerary':
+        return <ItineraryPlanner />;
+      case 'destinations':
+        return <DestinationInfo />;
+      case 'map':
+        return <InteractiveMap />;
+      case 'currency':
+        return <CurrencyConverter />;
+      case 'weather':
+        return <WeatherForecast />;
+      case 'blog':
+        return <TravelBlog />;
+      case 'reviews':
+        return <ReviewsAndRatings />;
+      case 'book':
+        return (
+          <section className="py-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <BookingSystem initialType={initialBookingType} />
+            </div>
+          </section>
+        );
+      default:
+        return renderHomePage();
+    }
+  };
+
+  const renderHomePage = () => (
+    <>
       {/* Hero Section */}
-<section className="hero-section">
-  <video
-    autoPlay
-    loop
-    muted
-    playsInline
-    className="hero-video"
-  >
-    <source src={heroVideo} type="video/mp4" />
-    Your browser does not support the video tag.
-  </video>
-  <div className="hero-overlay"></div>
-  <div className="hero-content fade-in">
-    <h1 className="text-4xl md:text-6xl font-bold mb-6">
-      Discover Your Next
-      <span className="block bg-[var(--gradient-hero)] bg-clip-text text-transparent">
-        Adventure
-      </span>
-    </h1>
-    <p className="text-xl md:text-2xl mb-8 text-white/90 max-w-2xl mx-auto leading-relaxed">
-      Explore breathtaking destinations, create unforgettable memories, 
-      and embark on the journey of a lifetime with our expertly curated travel experiences.
-    </p>
-    <div className="flex flex-col sm:flex-row gap-4 justify-center">
-      <Button 
-        className="btn-hero"
-        onClick={() => document.getElementById('search-section')?.scrollIntoView({ behavior: 'smooth' })}
-      >
-        Start Planning
-      </Button>
-      <Button 
-        variant="outline" 
-        className="border-white text-white hover:bg-white hover:text-foreground"
-        onClick={() => setShowVideoModal(true)}
-      >
-        Watch Video
-      </Button>
-    </div>
-  </div>
-</section>
-
+      <section className="hero-section">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="hero-video"
+        >
+          <source src={heroVideo} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+        <div className="hero-overlay"></div>
+        <div className="hero-content fade-in">
+          {/* Greeting when logged in */}
+          {userName && (
+            <div className="mb-4 text-white text-xl font-semibold text-center">
+              WELCOME {userName.toUpperCase()}
+            </div>
+          )}
+          <h1 className="text-4xl md:text-6xl font-bold mb-6">
+            {t('home.title.line1')}
+            <span className="block bg-[var(--gradient-hero)] bg-clip-text text-transparent">
+              {t('home.title.line2')}
+            </span>
+          </h1>
+          <p className="text-xl md:text-2xl mb-8 text-white/90 max-w-2xl mx-auto leading-relaxed">
+            {t('home.subtitle')}
+          </p>
+          <div className="flex justify-center">
+            <Button 
+              className="btn-hero"
+              onClick={() => document.getElementById('search-section')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              {t('home.startPlanning')}
+            </Button>
+          </div>
+        </div>
+      </section>
 
       {/* Stats Section */}
       <section className="py-16 bg-muted/30">
@@ -220,11 +284,44 @@ const Index = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
               <div key={index} className="text-center fade-in">
-                <div className="w-16 h-16 bg-[var(--gradient-button)] rounded-full flex items-center justify-center mx-auto mb-4">
-                  <stat.icon className="w-8 h-8 text-white" />
+                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <stat.icon className="w-8 h-8 text-black" />
                 </div>
                 <div className="text-3xl font-bold text-foreground mb-2">{stat.value}</div>
                 <div className="text-muted-foreground">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Quick Feature Access */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              {t('home.toolsTitle')}
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              {t('home.toolsSubtitle')}
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            {[
+              { id: 'itinerary', name: 'Itinerary Planner', icon: '📅', description: 'Plan your trip day by day' },
+              { id: 'destinations', name: 'Destinations Guide', icon: '🗺️', description: 'Explore amazing destinations' },
+              { id: 'weather', name: 'Weather Forecast', icon: '☀️', description: 'Check destination weather' },
+              { id: 'currency', name: 'Currency Converter', icon: '💱', description: 'Convert currencies easily' }
+            ].map((feature) => (
+              <div
+                key={feature.id}
+                onClick={() => handleFeatureSelect(feature.id)}
+                className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all cursor-pointer hover:scale-105"
+              >
+                <div className="text-4xl mb-4">{feature.icon}</div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">{feature.name}</h3>
+                <p className="text-gray-600">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -243,10 +340,10 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Popular Destinations
+              {t('home.popularDestinations')}
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Handpicked travel experiences from around the world, designed to create lasting memories
+              {t('home.popularSubtitle')}
             </p>
           </div>
 
@@ -333,9 +430,83 @@ const Index = () => {
           </div>
         </div>
       </section>
+    </>
+  );
 
-      {/* Footer */}
-      <Footer />
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Top Navigation */}
+        <Navbar
+          isLoggedIn={isLoggedIn}
+          onAuthClick={() => setShowAuthModal(true)}
+          onLogout={handleLogout}
+          wishlistCount={wishlistItems.length}
+          cartCount={cartItems.length}
+          onWishlistClick={() => setShowWishlistModal(true)}
+          onCartClick={() => {}}
+          currentFeature={currentFeature}
+          onFeatureSelect={handleFeatureSelect}
+          onHomeClick={() => setCurrentFeature('home')}
+        />
+
+        {/* Locked overlay content */}
+        <div className="flex items-center justify-center py-24 px-6">
+          <div className="max-w-xl w-full text-center bg-white/80 backdrop-blur-md border rounded-2xl p-10 shadow-xl">
+            <h2 className="text-3xl font-bold mb-3">Sign in to continue</h2>
+            <p className="text-muted-foreground mb-6">
+              Please login to search destinations and access all travel features.
+            </p>
+            <div className="flex justify-center gap-3">
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowAuthModal(true)}>
+                Sign In
+              </Button>
+              <Button variant="outline" onClick={() => setShowAuthModal(true)}>
+                Create Account
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Auth Modal */}
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onLogin={handleLogin}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Top Navigation */}
+      <Navbar
+        isLoggedIn={isLoggedIn}
+        onAuthClick={() => setShowAuthModal(true)}
+        onLogout={handleLogout}
+        wishlistCount={wishlistItems.length}
+        cartCount={cartItems.length}
+        onWishlistClick={() => setShowWishlistModal(true)}
+        onCartClick={() => {}}
+        currentFeature={currentFeature}
+        onFeatureSelect={handleFeatureSelect}
+        onHomeClick={() => setCurrentFeature('home')}
+      />
+
+      {/* Feature Navigation - Mobile Only */}
+      <FeatureNavigation
+        onFeatureSelect={handleFeatureSelect}
+        currentFeature={currentFeature}
+      />
+
+      {/* Dynamic Content */}
+      <div className="min-h-screen">
+        {renderCurrentFeature()}
+        
+        {/* Footer - only show on home page */}
+        {currentFeature === 'home' && <Footer />}
+      </div>
 
       {/* Modals */}
       <AuthModal

@@ -1,18 +1,27 @@
 import React, { useState } from 'react';
-import { X, Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
+import { X, Eye, EyeOff, Mail, Lock, User, Phone, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogin: (email: string, password: string) => void;
+  onLogin: (email: string, password: string, token: string, userData: any) => void;
 }
 
+// API URL - should be in an environment variable in a real app
+const API_URL = 'http://localhost:3000/api';
+
+// For debugging
+console.log('Using API URL:', API_URL);
+
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }) => {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -30,8 +39,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Basic email format validation
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(formData.email)) {
+      toast({ title: 'Invalid email', description: 'Please enter a valid email address', variant: 'destructive' });
+      return;
+    }
     
     if (isLogin) {
       // Login validation
@@ -44,30 +60,49 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
         return;
       }
       
-      // Simulate login - in real app, this would validate against stored credentials
-      const storedUser = localStorage.getItem('travel_planner_user');
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-        if (user.email === formData.email && user.password === formData.password) {
-          onLogin(formData.email, formData.password);
-          onClose();
-          toast({
-            title: "Welcome back!",
-            description: "Successfully logged in to your account."
-          });
-        } else {
-          toast({
-            title: "Invalid credentials",
-            description: "Invalid email or password",
-            variant: "destructive"
-          });
-        }
-      } else {
-        toast({
-          title: "Account not found",
-          description: "Please sign up first or check your credentials",
-          variant: "destructive"
+      // Login with backend
+      try {
+        setIsLoading(true);
+        const response = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email.trim(),
+            password: formData.password
+          }),
         });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Login failed');
+        }
+        
+        // Store token in localStorage
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('user_data', JSON.stringify(data.user));
+        
+        // Call onLogin with user data
+        onLogin(formData.email, formData.password, data.token, data.user);
+        
+        toast({ 
+          title: "Welcome back!", 
+          description: "Successfully logged in." 
+        });
+        
+        onClose();
+        navigate('/app');
+      } catch (error) {
+        console.error('Login error:', error);
+        toast({ 
+          title: "Login failed", 
+          description: error instanceof Error ? error.message : "Please check your credentials", 
+          variant: "destructive" 
+        });
+      } finally {
+        setIsLoading(false);
       }
     } else {
       // Sign up validation
@@ -89,34 +124,62 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
         return;
       }
       
-      if (formData.password.length < 6) {
+      // Strong password policy
+      const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?]).{8,}$/;
+      if (!strongPassword.test(formData.password)) {
         toast({
-          title: "Error",
-          description: "Password must be at least 6 characters",
+          title: "Weak password",
+          description: "Password must be at least 8 characters and include uppercase, lowercase, number, and special character.",
           variant: "destructive"
         });
         return;
       }
       
-      // Store user data
-      const userData = {
-        email: formData.email,
-        password: formData.password,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone
-      };
-      
-      localStorage.setItem('travel_planner_user', JSON.stringify(userData));
-      
-      toast({
-        title: "Account created!",
-        description: "Please login with your credentials."
-      });
-      
-      // Switch to login form
-      setIsLogin(true);
-      setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
+      // Register with backend
+      try {
+        setIsLoading(true);
+        const response = await fetch(`${API_URL}/auth/signup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email.trim(),
+            password: formData.password,
+            firstName: formData.firstName.trim(),
+            lastName: formData.lastName.trim(),
+            phone: formData.phone.trim()
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Registration failed');
+        }
+        
+        toast({ 
+          title: 'Account created!', 
+          description: 'Please sign in to continue.' 
+        });
+        
+        // Switch to login view and keep the email filled
+        setIsLogin(true);
+        setFormData(prev => ({
+          ...prev,
+          password: '',
+          confirmPassword: ''
+        }));
+      } catch (error) {
+        console.error('Registration error:', error);
+        toast({ 
+          title: "Registration failed", 
+          description: error instanceof Error ? error.message : "Please try again", 
+          variant: "destructive" 
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -148,7 +211,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
                   placeholder="First Name"
                   value={formData.firstName}
                   onChange={handleInputChange}
-                  className="pl-10"
+                  className="pl-10 bg-white text-black placeholder:text-gray-500"
                   required
                 />
               </div>
@@ -160,7 +223,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
                   placeholder="Last Name"
                   value={formData.lastName}
                   onChange={handleInputChange}
-                  className="pl-10"
+                  className="pl-10 bg-white text-black placeholder:text-gray-500"
                 />
               </div>
             </div>
@@ -174,7 +237,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
               placeholder="Email Address"
               value={formData.email}
               onChange={handleInputChange}
-              className="pl-10"
+              className="pl-10 bg-white text-black placeholder:text-gray-500"
               required
             />
           </div>
@@ -188,7 +251,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
                 placeholder="Phone Number"
                 value={formData.phone}
                 onChange={handleInputChange}
-                className="pl-10"
+                className="pl-10 bg-white text-black placeholder:text-gray-500"
               />
             </div>
           )}
@@ -201,7 +264,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
               placeholder="Password"
               value={formData.password}
               onChange={handleInputChange}
-              className="pl-10 pr-10"
+              className="pl-10 pr-10 bg-white text-black placeholder:text-gray-500"
               required
             />
             <button
@@ -222,14 +285,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
                 placeholder="Confirm Password"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
-                className="pl-10"
+                className="pl-10 bg-white text-black placeholder:text-gray-500"
                 required
               />
             </div>
           )}
 
-          <Button type="submit" className="w-full btn-hero">
-            {isLogin ? 'Sign In' : 'Create Account'}
+          <Button 
+            type="submit" 
+            className="w-full btn-hero" 
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {isLogin ? 'Signing In...' : 'Creating Account...'}
+              </>
+            ) : (
+              isLogin ? 'Sign In' : 'Create Account'
+            )}
           </Button>
         </form>
 

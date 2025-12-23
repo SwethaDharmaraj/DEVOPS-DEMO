@@ -19,6 +19,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   currency
 }) => {
   const [step, setStep] = useState(1);
+  const [bookingType, setBookingType] = useState<'package' | 'hotel' | 'flight' | 'car' | 'activity'>('package');
   const [bookingData, setBookingData] = useState({
     checkIn: '',
     checkOut: '',
@@ -31,7 +32,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     cardNumber: '',
     expiryDate: '',
     cvv: '',
-    cardName: ''
+    cardName: '',
+    // Flight specific
+    departure: '',
+    arrival: '',
+    departureDate: '',
+    returnDate: '',
+    travelClass: 'economy',
+    // Car rental specific
+    pickupLocation: '',
+    dropoffLocation: '',
+    carType: 'economy',
+    // Activity specific
+    activityDate: '',
+    participantCount: 2,
+    timeSlot: 'morning'
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
@@ -48,7 +63,26 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     return symbols[curr] || '$';
   };
 
-  const totalPrice = pkg.price * bookingData.guests;
+  const getBookingPrice = () => {
+    let basePrice = pkg.price;
+    let quantity = bookingType === 'activity' ? bookingData.participantCount : bookingData.guests;
+    
+    // Adjust pricing based on booking type
+    switch (bookingType) {
+      case 'hotel':
+        return basePrice * bookingData.rooms; // Hotel pricing per room
+      case 'flight':
+        return basePrice * quantity; // Flight pricing per passenger
+      case 'car':
+        return basePrice; // Car rental is usually flat rate
+      case 'activity':
+        return basePrice * bookingData.participantCount; // Activity pricing per participant
+      default:
+        return basePrice * quantity; // Package pricing per guest
+    }
+  };
+
+  const totalPrice = getBookingPrice();
   const taxes = Math.round(totalPrice * 0.15);
   const finalTotal = totalPrice + taxes;
 
@@ -59,7 +93,94 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     }));
   };
 
+  const isPast = (dateStr: string) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    const today = new Date();
+    // normalize to YYYY-MM-DD comparison
+    const toYMD = (x: Date) => x.toISOString().split('T')[0];
+    return toYMD(d) < toYMD(today);
+  };
+
+  const isInvalidDateRange = () => {
+    switch (bookingType) {
+      case 'flight': {
+        if (isPast(bookingData.departureDate)) return 'Departure date cannot be in the past.';
+        if (bookingData.returnDate && bookingData.returnDate < bookingData.departureDate)
+          return 'Return date must be the same or after departure date.';
+        break;
+      }
+      case 'car': {
+        if (isPast(bookingData.checkIn)) return 'Pickup date cannot be in the past.';
+        if (bookingData.checkOut && bookingData.checkOut < bookingData.checkIn)
+          return 'Return date must be the same or after pickup date.';
+        break;
+      }
+      case 'activity': {
+        if (isPast(bookingData.activityDate)) return 'Activity date cannot be in the past.';
+        break;
+      }
+      case 'package':
+      case 'hotel': {
+        if (isPast(bookingData.checkIn)) return 'Check-in date cannot be in the past.';
+        if (bookingData.checkOut && bookingData.checkOut < bookingData.checkIn)
+          return 'Check-out must be the same or after check-in.';
+        break;
+      }
+    }
+    return '';
+  };
+
+  const isEmpty = (s: string | number) => {
+    if (typeof s === 'number') return false;
+    return !s || s.trim() === '';
+  };
+
+  const validateStep = (): string => {
+    if (step === 1) {
+      const dateError = isInvalidDateRange();
+      if (dateError) return dateError;
+      switch (bookingType) {
+        case 'package':
+        case 'hotel':
+          if (isEmpty(bookingData.checkIn) || isEmpty(bookingData.checkOut)) return 'Please select check-in and check-out dates.';
+          break;
+        case 'flight':
+          if (isEmpty(bookingData.departure) || isEmpty(bookingData.arrival)) return 'Please enter departure and arrival cities.';
+          if (isEmpty(bookingData.departureDate)) return 'Please select a departure date.';
+          break;
+        case 'car':
+          if (isEmpty(bookingData.pickupLocation) || isEmpty(bookingData.dropoffLocation)) return 'Please enter pickup and drop-off locations.';
+          if (isEmpty(bookingData.checkIn) || isEmpty(bookingData.checkOut)) return 'Please select pickup and return dates.';
+          break;
+        case 'activity':
+          if (isEmpty(bookingData.activityDate)) return 'Please select an activity date.';
+          break;
+      }
+    }
+
+    if (step === 2) {
+      if (isEmpty(bookingData.fullName)) return 'Please enter your full name.';
+      if (isEmpty(bookingData.email)) return 'Please enter your email address.';
+      if (isEmpty(bookingData.phone)) return 'Please enter your phone number.';
+    }
+
+    if (step === 3) {
+      if (isEmpty(bookingData.cardNumber)) return 'Please enter your card number.';
+      if (isEmpty(bookingData.expiryDate)) return 'Please enter card expiry date.';
+      if (isEmpty(bookingData.cvv)) return 'Please enter the CVV.';
+      if (isEmpty(bookingData.cardName)) return 'Please enter the cardholder name.';
+    }
+
+    return '';
+  };
+
   const handleNext = () => {
+    const error = validateStep();
+    if (error) {
+      toast({ title: 'Incomplete information', description: error });
+      return;
+    }
     if (step < 3) setStep(step + 1);
   };
 
@@ -197,54 +318,243 @@ Thank you for choosing Travel Planner!
               ))}
             </div>
 
+            {/* Booking Type Selection */}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold mb-4">Choose Booking Type</h3>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {[
+                  { id: 'package', name: 'Travel Package', icon: '🎒', desc: pkg.title },
+                  { id: 'hotel', name: 'Hotels', icon: '🏨', desc: 'Accommodation only' },
+                  { id: 'flight', name: 'Flights', icon: '✈️', desc: 'Flight tickets' },
+                  { id: 'car', name: 'Car Rental', icon: '🚗', desc: 'Vehicle rental' },
+                  { id: 'activity', name: 'Activities', icon: '🎯', desc: 'Tours & experiences' }
+                ].map((type) => (
+                  <div
+                    key={type.id}
+                    onClick={() => setBookingType(type.id as any)}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:shadow-md ${
+                      bookingType === type.id 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-2xl mb-2">{type.icon}</div>
+                    <div className="font-semibold text-sm mb-1">{type.name}</div>
+                    <div className="text-xs text-gray-600">{type.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Left Side - Forms */}
               <div className="lg:col-span-2 space-y-6">
                 {step === 1 && (
                   <div className="space-y-6">
-                    <h3 className="text-xl font-semibold">Trip Details</h3>
+                    <h3 className="text-xl font-semibold">
+                      {bookingType === 'package' && 'Trip Details'}
+                      {bookingType === 'hotel' && 'Hotel Booking Details'}
+                      {bookingType === 'flight' && 'Flight Booking Details'}
+                      {bookingType === 'car' && 'Car Rental Details'}
+                      {bookingType === 'activity' && 'Activity Booking Details'}
+                    </h3>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Check-in Date</label>
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                          <Input
-                            type="date"
-                            value={bookingData.checkIn}
-                            onChange={(e) => handleInputChange('checkIn', e.target.value)}
-                            className="pl-10"
-                          />
+                    {/* Dynamic form based on booking type */}
+                    {bookingType === 'package' || bookingType === 'hotel' ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Check-in Date</label>
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                            <Input
+                              type="date"
+                              value={bookingData.checkIn}
+                              onChange={(e) => handleInputChange('checkIn', e.target.value)}
+                              min={new Date().toISOString().split('T')[0]}
+                              className="pl-10"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Check-out Date</label>
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                            <Input
+                              type="date"
+                              value={bookingData.checkOut}
+                              onChange={(e) => handleInputChange('checkOut', e.target.value)}
+                              min={bookingData.checkIn || new Date().toISOString().split('T')[0]}
+                              className="pl-10"
+                            />
+                          </div>
                         </div>
                       </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Check-out Date</label>
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                          <Input
-                            type="date"
-                            value={bookingData.checkOut}
-                            onChange={(e) => handleInputChange('checkOut', e.target.value)}
-                            className="pl-10"
-                          />
+                    ) : bookingType === 'flight' ? (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Departure City</label>
+                            <Input
+                              type="text"
+                              value={bookingData.departure}
+                              onChange={(e) => handleInputChange('departure', e.target.value)}
+                              placeholder="Enter departure city"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Arrival City</label>
+                            <Input
+                              type="text"
+                              value={bookingData.arrival}
+                              onChange={(e) => handleInputChange('arrival', e.target.value)}
+                              placeholder="Enter destination city"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Departure Date</label>
+                            <Input
+                              type="date"
+                              value={bookingData.departureDate}
+                              onChange={(e) => handleInputChange('departureDate', e.target.value)}
+                              min={new Date().toISOString().split('T')[0]}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Return Date</label>
+                            <Input
+                              type="date"
+                              value={bookingData.returnDate}
+                              onChange={(e) => handleInputChange('returnDate', e.target.value)}
+                              min={bookingData.departureDate || new Date().toISOString().split('T')[0]}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Travel Class</label>
+                          <select
+                            value={bookingData.travelClass}
+                            onChange={(e) => handleInputChange('travelClass', e.target.value)}
+                            className="w-full h-12 px-4 bg-background border border-input rounded-md text-foreground"
+                          >
+                            <option value="economy">Economy Class</option>
+                            <option value="premium">Premium Economy</option>
+                            <option value="business">Business Class</option>
+                            <option value="first">First Class</option>
+                          </select>
                         </div>
                       </div>
-                    </div>
+                    ) : bookingType === 'car' ? (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Pickup Location</label>
+                            <Input
+                              type="text"
+                              value={bookingData.pickupLocation}
+                              onChange={(e) => handleInputChange('pickupLocation', e.target.value)}
+                              placeholder="Enter pickup location"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Drop-off Location</label>
+                            <Input
+                              type="text"
+                              value={bookingData.dropoffLocation}
+                              onChange={(e) => handleInputChange('dropoffLocation', e.target.value)}
+                              placeholder="Enter drop-off location"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Pickup Date</label>
+                            <Input
+                              type="date"
+                              value={bookingData.checkIn}
+                              onChange={(e) => handleInputChange('checkIn', e.target.value)}
+                              min={new Date().toISOString().split('T')[0]}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Return Date</label>
+                            <Input
+                              type="date"
+                              value={bookingData.checkOut}
+                              onChange={(e) => handleInputChange('checkOut', e.target.value)}
+                              min={bookingData.checkIn || new Date().toISOString().split('T')[0]}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Car Type</label>
+                          <select
+                            value={bookingData.carType}
+                            onChange={(e) => handleInputChange('carType', e.target.value)}
+                            className="w-full h-12 px-4 bg-background border border-input rounded-md text-foreground"
+                          >
+                            <option value="economy">Economy Car</option>
+                            <option value="compact">Compact Car</option>
+                            <option value="midsize">Midsize Car</option>
+                            <option value="fullsize">Full-size Car</option>
+                            <option value="suv">SUV</option>
+                            <option value="luxury">Luxury Car</option>
+                          </select>
+                        </div>
+                      </div>
+                    ) : bookingType === 'activity' ? (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Activity Date</label>
+                            <Input
+                              type="date"
+                              value={bookingData.activityDate}
+                              onChange={(e) => handleInputChange('activityDate', e.target.value)}
+                              min={new Date().toISOString().split('T')[0]}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Time Slot</label>
+                            <select
+                              value={bookingData.timeSlot}
+                              onChange={(e) => handleInputChange('timeSlot', e.target.value)}
+                              className="w-full h-12 px-4 bg-background border border-input rounded-md text-foreground"
+                            >
+                              <option value="morning">Morning (9:00 AM - 12:00 PM)</option>
+                              <option value="afternoon">Afternoon (1:00 PM - 5:00 PM)</option>
+                              <option value="evening">Evening (6:00 PM - 9:00 PM)</option>
+                              <option value="fullday">Full Day (9:00 AM - 6:00 PM)</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-2">Number of Guests</label>
+                        <label className="block text-sm font-medium mb-2">
+                          {bookingType === 'activity' ? 'Number of Participants' : 
+                           bookingType === 'flight' ? 'Number of Passengers' : 
+                           bookingType === 'car' ? 'Number of Passengers' : 'Number of Guests'}
+                        </label>
                         <div className="relative">
                           <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                           <select
-                            value={bookingData.guests}
-                            onChange={(e) => handleInputChange('guests', parseInt(e.target.value))}
+                            value={bookingType === 'activity' ? bookingData.participantCount : bookingData.guests}
+                            onChange={(e) => handleInputChange(
+                              bookingType === 'activity' ? 'participantCount' : 'guests', 
+                              parseInt(e.target.value)
+                            )}
                             className="w-full h-12 pl-10 pr-4 bg-background border border-input rounded-md text-foreground"
                           >
                             {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
                               <option key={num} value={num}>
-                                {num} Guest{num > 1 ? 's' : ''}
+                                {num} {bookingType === 'activity' ? 'Participant' : 
+                                      bookingType === 'flight' ? 'Passenger' : 
+                                      bookingType === 'car' ? 'Passenger' : 'Guest'}{num > 1 ? 's' : ''}
                               </option>
                             ))}
                           </select>

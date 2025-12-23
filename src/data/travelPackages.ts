@@ -627,25 +627,73 @@ export const getPackagesByDestination = (destination: string): TravelPackage[] =
 
 export const getPackagesByFilters = (filters: any): TravelPackage[] => {
   let filtered = [...travelPackages];
+  let originalFiltered = [...travelPackages];
   
+  // Apply destination filter first
   if (filters.destination) {
-    filtered = filtered.filter(pkg =>
+    const destinationFiltered = filtered.filter(pkg =>
       pkg.location.toLowerCase().includes(filters.destination.toLowerCase()) ||
       pkg.title.toLowerCase().includes(filters.destination.toLowerCase())
     );
+    
+    if (destinationFiltered.length > 0) {
+      filtered = destinationFiltered;
+    } else {
+      // If no exact match, find similar destinations or show popular ones
+      const partialMatch = filtered.filter(pkg => {
+        const searchTerm = filters.destination.toLowerCase();
+        return pkg.location.toLowerCase().split(' ').some(word => 
+          word.includes(searchTerm) || searchTerm.includes(word)
+        ) || pkg.title.toLowerCase().split(' ').some(word =>
+          word.includes(searchTerm) || searchTerm.includes(word)
+        );
+      });
+      
+      if (partialMatch.length > 0) {
+        filtered = partialMatch;
+      } else {
+        // Show most popular packages as fallback
+        filtered = travelPackages.sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 8);
+      }
+    }
   }
   
+  // Apply category filter
   if (filters.category) {
-    filtered = filtered.filter(pkg => pkg.category === filters.category);
+    const categoryFiltered = filtered.filter(pkg => pkg.category === filters.category);
+    if (categoryFiltered.length > 0) {
+      filtered = categoryFiltered;
+    } else {
+      // If no category match, just keep the current filtered results
+      // Don't further reduce the results
+    }
   }
   
+  // Apply budget filter
   if (filters.budget) {
     const [min, max] = filters.budget.split('-').map(Number);
+    let budgetFiltered;
+    
     if (max) {
-      filtered = filtered.filter(pkg => pkg.price >= min && pkg.price <= max);
+      budgetFiltered = filtered.filter(pkg => pkg.price >= min && pkg.price <= max);
     } else if (filters.budget.includes('+')) {
-      filtered = filtered.filter(pkg => pkg.price >= min);
+      budgetFiltered = filtered.filter(pkg => pkg.price >= min);
     }
+    
+    if (budgetFiltered && budgetFiltered.length > 0) {
+      filtered = budgetFiltered;
+    } else if (budgetFiltered && budgetFiltered.length === 0) {
+      // If no budget match, show closest price range
+      const avgPrice = Math.max(min, max || min);
+      filtered = filtered.sort((a, b) => 
+        Math.abs(a.price - avgPrice) - Math.abs(b.price - avgPrice)
+      ).slice(0, 6);
+    }
+  }
+  
+  // Ensure we always return at least some results
+  if (filtered.length === 0) {
+    return travelPackages.sort((a, b) => b.rating - a.rating).slice(0, 6);
   }
   
   return filtered;

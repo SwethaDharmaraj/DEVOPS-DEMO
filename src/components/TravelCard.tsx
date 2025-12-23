@@ -1,6 +1,7 @@
 import React from 'react';
-import { Heart, Star, MapPin, Clock, Users } from 'lucide-react';
+import { Heart, Star, MapPin, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export interface TravelPackage {
   id: string;
@@ -32,6 +33,8 @@ export const TravelCard: React.FC<TravelCardProps> = ({
   onBookNow,
   currency
 }) => {
+  const { t } = useLanguage();
+
   const getCurrencySymbol = (curr: string) => {
     const symbols: { [key: string]: string } = {
       USD: '$', EUR: '€', GBP: '£', JPY: '¥', CAD: 'C$',
@@ -74,7 +77,7 @@ export const TravelCard: React.FC<TravelCardProps> = ({
         {/* Booked times indicator */}
         {pkg.bookedTimes && (
           <div className="absolute top-3 left-3 mt-8 bg-secondary/90 backdrop-blur-sm text-secondary-foreground text-xs font-semibold px-3 py-1 rounded-full">
-            Booked {pkg.bookedTimes} times yesterday
+            {t('card.bookedTimes').replace('{count}', String(pkg.bookedTimes))}
           </div>
         )}
 
@@ -120,7 +123,7 @@ export const TravelCard: React.FC<TravelCardProps> = ({
             {pkg.rating.toFixed(1)}
           </span>
           <span className="text-sm text-muted-foreground">
-            ({pkg.reviewCount} reviews)
+            ({pkg.reviewCount} {t('card.reviews')})
           </span>
         </div>
 
@@ -140,13 +143,13 @@ export const TravelCard: React.FC<TravelCardProps> = ({
             <div className="text-2xl font-bold text-foreground">
               {getCurrencySymbol(currency)}{pkg.price}
             </div>
-            <div className="text-sm text-muted-foreground">per person</div>
+            <div className="text-sm text-muted-foreground">{t('card.perPerson')}</div>
           </div>
           <Button
             onClick={() => onBookNow(pkg.id)}
             className="btn-accent"
           >
-            Book Now
+            {t('booking.bookNow')}
           </Button>
         </div>
       </div>

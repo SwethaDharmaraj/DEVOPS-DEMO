@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Search, MapPin, Calendar, Users, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface SearchFilters {
   destination: string;
@@ -18,6 +19,8 @@ interface SearchSectionProps {
 }
 
 export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
+  const { t } = useLanguage();
+
   const [filters, setFilters] = useState<SearchFilters>({
     destination: '',
     checkIn: '',
@@ -71,10 +74,10 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
     <div className="search-section fade-in">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-foreground mb-2">
-          Find Your Perfect Trip
+          {t('search.title')}
         </h2>
         <p className="text-muted-foreground">
-          Discover amazing destinations and create unforgettable memories
+          {t('search.subtitle')}
         </p>
       </div>
 
@@ -85,7 +88,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
             <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
             <Input
               type="text"
-              placeholder="Where do you want to go?"
+              placeholder={t('search.where')}
               value={filters.destination}
               onChange={(e) => handleInputChange('destination', e.target.value)}
               className="pl-10 h-12"
@@ -96,7 +99,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
             <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
             <Input
               type="date"
-              placeholder="Check-in"
+              placeholder={t('search.checkIn')}
               value={filters.checkIn}
               onChange={(e) => handleInputChange('checkIn', e.target.value)}
               className="pl-10 h-12"
@@ -107,7 +110,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
             <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
             <Input
               type="date"
-              placeholder="Check-out"
+              placeholder={t('search.checkOut')}
               value={filters.checkOut}
               onChange={(e) => handleInputChange('checkOut', e.target.value)}
               className="pl-10 h-12"
@@ -138,7 +141,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
           >
             <Filter className="w-4 h-4" />
             <span className="text-sm font-medium">
-              {showAdvanced ? 'Hide' : 'Show'} Advanced Filters
+              {showAdvanced ? t('search.hideAdvanced') : t('search.showAdvanced')}
             </span>
           </button>
         </div>
@@ -148,7 +151,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-muted/30 rounded-lg">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Budget Range
+                {t('search.budgetRange')}
               </label>
               <select
                 value={filters.budget}
@@ -165,7 +168,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Category
+                {t('search.category')}
               </label>
               <select
                 value={filters.category}
@@ -182,7 +185,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Duration
+                {t('search.duration')}
               </label>
               <select
                 value={filters.duration}
@@ -206,7 +209,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
             className="btn-hero w-full md:w-auto px-12 py-4 text-lg"
           >
             <Search className="w-5 h-5 mr-2" />
-            Search Trips
+            {t('search.searchTrips')}
           </Button>
         </div>
       </div>
